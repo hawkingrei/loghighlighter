@@ -122,12 +122,20 @@ h2 {
   animation: float-in 0.6s ease-out;
 }
 
-.panel:first-of-type {
-  grid-column: span 5;
+.landing-panel {
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 680px;
+}
+
+.input-panel {
+  grid-column: 3 / span 8;
+  padding: 16px;
+  gap: 12px;
 }
 
 .panel.preview {
-  grid-column: span 7;
+  grid-column: 1 / -1;
 }
 
 .field {
@@ -149,6 +157,11 @@ h2 {
   font-family: var(--font-mono), monospace;
   font-size: 0.85rem;
   color: var(--text);
+}
+
+.input-panel .field input {
+  padding: 8px 10px;
+  font-size: 0.82rem;
 }
 
 .file-input {
@@ -207,6 +220,23 @@ button.primary {
   box-shadow: 0 12px 22px rgba(226, 109, 92, 0.4);
 }
 
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background: var(--accent);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 12px 22px rgba(226, 109, 92, 0.4);
+}
+
+.primary-button:hover {
+  filter: brightness(1.03);
+}
+
 button.ghost {
   background: var(--surface-2);
   color: var(--text);
@@ -246,14 +276,14 @@ button.ghost {
 
 .preview-window {
   font-family: var(--font-mono), monospace;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   background: #11110f;
   color: #f5f1e6;
   border-radius: 16px;
-  padding: 16px;
-  min-height: 420px;
+  padding: 20px;
+  min-height: 520px;
   overflow: auto;
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-wrap;
   border: 1px solid #2a2621;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
@@ -349,6 +379,16 @@ button.ghost {
   gap: 10px;
 }
 
+.flag-grid.compact {
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.flag-grid.compact .flag-item {
+  font-size: 0.75rem;
+  padding: 6px 8px;
+}
+
 .color-input {
   width: 54px;
   height: 36px;
@@ -383,7 +423,7 @@ button.ghost {
 }
 
 .settings-panel {
-  max-width: 1100px;
+  max-width: 1260px;
   width: 100%;
   max-height: calc(100vh - 80px);
   overflow: auto;
@@ -439,6 +479,75 @@ button.ghost {
   outline: none;
 }
 
+.flag-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.flag-legend {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+.flag-cell {
+  width: 100%;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.flag-cell:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.flag-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 14, 12, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 30;
+}
+
+.flag-editor {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.flag-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.action-buttons {
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 900px) {
+  .action-buttons {
+    flex-wrap: wrap;
+  }
+}
+
 .rules-table .rule-error {
   display: inline-block;
   margin-top: 6px;
@@ -460,7 +569,7 @@ button.ghost {
     grid-template-columns: repeat(6, 1fr);
   }
 
-  .panel:first-of-type,
+  .input-panel,
   .panel.preview {
     grid-column: span 6;
   }
