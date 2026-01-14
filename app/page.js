@@ -428,6 +428,12 @@ export default function Home() {
           />
         </section>
       </main>
+      <footer className="footer">
+        <span>Made by</span>
+        <a href="https://github.com/hawkingrei" target="_blank" rel="noreferrer">
+          hawkingrei
+        </a>
+      </footer>
       {showSettings && (
         <div className="settings-overlay" role="dialog" aria-modal="true">
           <div className="panel settings-panel">
