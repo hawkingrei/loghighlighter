@@ -76,6 +76,15 @@ const DEFAULT_RULES = [
     note: "Go panic",
   },
   {
+    id: "test-timeout",
+    name: "Test timed out",
+    pattern: "-- Test timed out",
+    flags: "g-i",
+    color: "#ffd166",
+    enabled: true,
+    note: "Test timeout",
+  },
+  {
     id: "separator",
     name: "========",
     pattern: "========",
