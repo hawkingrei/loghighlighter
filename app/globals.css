@@ -31,6 +31,10 @@ body {
   padding: 40px 24px 80px;
 }
 
+.page.viewer {
+  max-width: 1320px;
+}
+
 .hero {
   display: flex;
   gap: 32px;
@@ -281,7 +285,7 @@ button.ghost {
   color: #f5f1e6;
   border-radius: 16px;
   padding: 20px;
-  min-height: 520px;
+  min-height: 620px;
   overflow: auto;
   line-height: 1.6;
   white-space: pre-wrap;

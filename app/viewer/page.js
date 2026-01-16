@@ -6,11 +6,20 @@ const DEFAULT_RULES = [
   {
     id: "level-error",
     name: "Error Level",
-    pattern: "\\b(ERROR|FATAL|CRITICAL)\\b",
+    pattern: "\\b(ERROR|FATAL)\\b",
     flags: "gi",
     color: "#ef6b6b",
     enabled: true,
     note: "Severity highlight",
+  },
+  {
+    id: "level-critical",
+    name: "Critical Level",
+    pattern: "\\bCRITICAL\\b",
+    flags: "gi",
+    color: "#ef6b6b",
+    enabled: false,
+    note: "Critical severity",
   },
   {
     id: "level-warn",
@@ -18,7 +27,7 @@ const DEFAULT_RULES = [
     pattern: "\\b(WARN|WARNING)\\b",
     flags: "gi",
     color: "#f0a202",
-    enabled: true,
+    enabled: false,
     note: "Warnings",
   },
   {
@@ -128,6 +137,15 @@ const DEFAULT_RULES = [
     color: "#d62828",
     enabled: true,
     note: "Assertion failures",
+  },
+  {
+    id: "assert-fail",
+    name: "assert fail",
+    pattern: "assert fail",
+    flags: "g-i",
+    color: "#ff4d6d",
+    enabled: true,
+    note: "Assertion failures (short)",
   },
   {
     id: "goleak",
@@ -362,7 +380,7 @@ export default function Home() {
   };
 
   return (
-    <div className="page">
+    <div className="page viewer">
       <main className="layout">
         <section className="panel input-panel">
           <h2>Log Input</h2>
