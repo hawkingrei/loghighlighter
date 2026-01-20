@@ -253,6 +253,44 @@ button.ghost {
   min-height: 18px;
 }
 
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  appearance: none;
+}
+
+.progress-bar::-webkit-progress-bar {
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+
+.progress-bar::-webkit-progress-value {
+  background: linear-gradient(90deg, #e26d5c, #f1c27a);
+  border-radius: 999px;
+}
+
+.progress-bar::-moz-progress-bar {
+  background: linear-gradient(90deg, #e26d5c, #f1c27a);
+  border-radius: 999px;
+}
+
+.progress-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  min-width: 120px;
+  text-align: right;
+}
+
 .rules-list {
   display: flex;
   flex-direction: column;

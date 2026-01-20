@@ -77,12 +77,12 @@ const DEFAULT_RULES = [
   },
   {
     id: "separator",
-    name: "========",
-    pattern: "========",
+    name: "========================================",
+    pattern: "========================================",
     flags: "g",
     color: "#e9c46a",
     enabled: true,
-    note: "Separator",
+    note: "Long separator",
   },
   {
     id: "index-range",

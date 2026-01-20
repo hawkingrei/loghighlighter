@@ -10,6 +10,11 @@ export default function Home() {
   const [urlValue, setUrlValue] = useState("");
   const [urlStatus, setUrlStatus] = useState("");
   const [fileStatus, setFileStatus] = useState("");
+  const [downloadState, setDownloadState] = useState({
+    active: false,
+    loaded: 0,
+    total: 0,
+  });
 
   const handleRenderFromUrl = async () => {
     setUrlStatus("");
@@ -21,6 +26,7 @@ export default function Home() {
     }
 
     setUrlStatus("Loading...");
+    setDownloadState({ active: true, loaded: 0, total: 0 });
 
     try {
       const response = await fetch(`/api/fetch-log?url=${encodeURIComponent(url)}`);
@@ -28,12 +34,42 @@ export default function Home() {
         const message = await readErrorMessage(response);
         throw new Error(message);
       }
-      const text = await response.text();
+      const contentLength = Number(response.headers.get("content-length") || 0);
+      const reader = response.body?.getReader();
+      let text = "";
+
+      if (reader) {
+        const decoder = new TextDecoder();
+        const chunks = [];
+        let received = 0;
+        setDownloadState({ active: true, loaded: 0, total: contentLength });
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          received += value.length;
+          chunks.push(decoder.decode(value, { stream: true }));
+          setDownloadState({
+            active: true,
+            loaded: received,
+            total: contentLength,
+          });
+        }
+
+        text = chunks.join("") + decoder.decode();
+      } else {
+        text = await response.text();
+      }
+
       sessionStorage.setItem(PENDING_LOG_KEY, text);
       router.push("/viewer");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load.";
       setUrlStatus(message);
+      setDownloadState({ active: false, loaded: 0, total: 0 });
+      return;
+    } finally {
+      setDownloadState((prev) => ({ ...prev, active: false }));
     }
   };
 
@@ -90,6 +126,18 @@ export default function Home() {
             </button>
           </div>
           <small className="status">{urlStatus}</small>
+          {downloadState.active ? (
+            <div className="progress-wrap" aria-live="polite">
+              <progress
+                className="progress-bar"
+                value={downloadState.total ? downloadState.loaded : undefined}
+                max={downloadState.total || undefined}
+              />
+              <span className="progress-label">
+                {formatProgress(downloadState.loaded, downloadState.total)}
+              </span>
+            </div>
+          ) : null}
         </label>
 
         <label className="field">
@@ -121,4 +169,23 @@ async function readErrorMessage(response) {
     if (payload?.error) return payload.error;
   }
   return `Unable to load (${response.status}).`;
+}
+
+function formatProgress(loaded, total) {
+  const loadedText = formatBytes(loaded);
+  if (!total) return `${loadedText} downloaded`;
+  const percent = Math.min(100, Math.round((loaded / total) * 100));
+  return `${loadedText} / ${formatBytes(total)} (${percent}%)`;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value.toFixed(value < 10 && index > 0 ? 1 : 0)} ${units[index]}`;
 }
