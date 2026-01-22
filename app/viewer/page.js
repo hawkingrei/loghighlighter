@@ -6,8 +6,8 @@ const DEFAULT_RULES = [
   {
     id: "level-error",
     name: "Error Level",
-    pattern: "\\b(ERROR|FATAL)\\b",
-    flags: "gi",
+    pattern: "\\b(Error|ERROR|FATAL|CRITICAL)\\b",
+    flags: "g-i",
     color: "#ef6b6b",
     enabled: true,
     note: "Severity highlight",
