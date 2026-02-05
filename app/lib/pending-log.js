@@ -109,33 +109,49 @@ async function idbSet(value) {
   });
 }
 
-async function idbGet() {
+async function idbConsume() {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
+    const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
     const request = store.get(DB_KEY);
+    let value = null;
+    let settled = false;
+
+    const safeResolve = (result) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
+    const safeReject = (error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    };
 
     request.onsuccess = () => {
-      resolve(request.result);
+      value = request.result;
+      store.delete(DB_KEY);
     };
 
     request.onerror = () => {
-      reject(request.error);
+      safeReject(request.error);
     };
 
     tx.oncomplete = () => {
       db.close();
+      safeResolve(value);
     };
 
     tx.onabort = () => {
       db.close();
-      reject(tx.error);
+      safeReject(tx.error);
     };
 
     tx.onerror = () => {
       db.close();
-      reject(tx.error);
+      safeReject(tx.error);
     };
   });
 }
@@ -258,7 +274,7 @@ export async function consumePendingLog() {
 
   if (canUseIndexedDb()) {
     try {
-      const stored = await idbGet();
+      const stored = await idbConsume();
       idbPayload = parseStoredValue(stored);
     } catch (error) {
       // Ignore indexedDB errors.
