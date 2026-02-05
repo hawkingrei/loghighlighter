@@ -77,6 +77,15 @@ const DEFAULT_RULES = [
     note: "Test timeout",
   },
   {
+    id: "test-repeat",
+    name: "Test: Test",
+    pattern: "Test:[\\t ]+Test",
+    flags: "g-i",
+    color: "#8ecae6",
+    enabled: true,
+    note: "Test label repeats",
+  },
+  {
     id: "separator",
     name: "========================================",
     pattern: "========================================",
