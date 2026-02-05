@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { consumePendingLog } from "../lib/pending-log";
 
 const DEFAULT_RULES = [
   {
@@ -173,7 +174,6 @@ const DEFAULT_RULE_MAP = DEFAULT_RULES.reduce((acc, rule) => {
 }, {});
 
 const STORAGE_KEY = "loghighlighter.rules.v1";
-const PENDING_LOG_KEY = "loghighlighter.pendingLog.v1";
 const COLLAPSE_MAX_LINES = 14;
 const COLLAPSE_MAX_CHARS = 1200;
 const PREVIEW_LINES = 2;
@@ -204,11 +204,16 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const pending = sessionStorage.getItem(PENDING_LOG_KEY);
-    if (pending) {
-      setLogText(pending);
-      sessionStorage.removeItem(PENDING_LOG_KEY);
-    }
+    let active = true;
+    void (async () => {
+      const pending = await consumePendingLog();
+      if (active && pending !== "") {
+        setLogText(pending);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {

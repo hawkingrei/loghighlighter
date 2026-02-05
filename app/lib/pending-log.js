@@ -1,0 +1,180 @@
+const PENDING_LOG_KEY = "loghighlighter.pendingLog.v1";
+const MEMORY_LOG_KEY = "__loghighlighter_pendingLog";
+const DB_NAME = "loghighlighter";
+const STORE_NAME = "pendingLog";
+const DB_KEY = "log";
+
+function canUseIndexedDb() {
+  return typeof indexedDB !== "undefined";
+}
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
+async function idbSet(value) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.put(value, DB_KEY);
+
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
+
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+async function idbGet() {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(DB_KEY);
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+
+    tx.oncomplete = () => {
+      db.close();
+    };
+
+    tx.onerror = () => {
+      db.close();
+    };
+  });
+}
+
+async function idbDelete() {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.delete(DB_KEY);
+
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
+
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+function setMemoryPendingLog(text) {
+  try {
+    window[MEMORY_LOG_KEY] = text;
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function consumeMemoryPendingLog() {
+  try {
+    const value = window[MEMORY_LOG_KEY];
+    if (typeof value === "string") {
+      delete window[MEMORY_LOG_KEY];
+      return value;
+    }
+  } catch (error) {
+    return "";
+  }
+  return "";
+}
+
+export async function storePendingLog(text) {
+  if (typeof window === "undefined") return { ok: false };
+
+  try {
+    sessionStorage.setItem(PENDING_LOG_KEY, text);
+    return { ok: true, via: "session" };
+  } catch (error) {
+    // Continue to indexedDB.
+  }
+
+  if (canUseIndexedDb()) {
+    try {
+      await idbSet(text);
+      return { ok: true, via: "indexeddb" };
+    } catch (error) {
+      // Continue to memory.
+    }
+  }
+
+  if (setMemoryPendingLog(text)) {
+    return { ok: true, via: "memory" };
+  }
+
+  return { ok: false };
+}
+
+export async function consumePendingLog() {
+  if (typeof window === "undefined") return "";
+
+  const memoryValue = consumeMemoryPendingLog();
+  if (memoryValue) return memoryValue;
+
+  try {
+    const pending = sessionStorage.getItem(PENDING_LOG_KEY);
+    if (pending !== null) {
+      sessionStorage.removeItem(PENDING_LOG_KEY);
+      return pending;
+    }
+  } catch (error) {
+    // Continue to indexedDB.
+  }
+
+  if (canUseIndexedDb()) {
+    try {
+      const stored = await idbGet();
+      await idbDelete();
+      return typeof stored === "string" ? stored : "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  return "";
+}
