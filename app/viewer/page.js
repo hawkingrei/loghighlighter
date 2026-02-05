@@ -938,8 +938,8 @@ function renderPlainSegment(rawSegment, plainSegment) {
   const lineCount = countLines(plainSegment);
   const summaryText =
     lineCount > 1
-      ? `Hidden ${lineCount} lines (click to expand)`
-      : "Hidden long line (click to expand)";
+      ? `Hidden ${lineCount} lines (click to show)`
+      : "Hidden long line (click to show)";
   const snippet = buildSnippet(plainSegment);
 
   return `<details class="fold-block"><summary>${escapeHtml(
