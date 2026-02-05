@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const PENDING_LOG_KEY = "loghighlighter.pendingLog.v1";
+import { storePendingLog } from "./lib/pending-log";
 
 export default function Home() {
   const router = useRouter();
@@ -61,8 +60,13 @@ export default function Home() {
         text = await response.text();
       }
 
-      sessionStorage.setItem(PENDING_LOG_KEY, text);
-      router.push("/viewer");
+      const stored = await storePendingLog(text);
+      if (!stored.ok) {
+        setUrlStatus("Unable to store log in browser storage.");
+        setDownloadState({ active: false, loaded: 0, total: 0 });
+        return;
+      }
+      navigateToViewer(router, stored.via !== "memory");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load.";
       setUrlStatus(message);
@@ -78,11 +82,19 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setFileStatus("Reading file...");
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
-      sessionStorage.setItem(PENDING_LOG_KEY, result);
-      router.push("/viewer");
+      void (async () => {
+        const stored = await storePendingLog(result);
+        if (!stored.ok) {
+          setFileStatus("Unable to store log in browser storage.");
+          return;
+        }
+        setFileStatus("Opening viewer...");
+        navigateToViewer(router, stored.via !== "memory");
+      })();
     };
     reader.onerror = () => {
       setFileStatus("Unable to read file.");
@@ -169,6 +181,16 @@ async function readErrorMessage(response) {
     if (payload?.error) return payload.error;
   }
   return `Unable to load (${response.status}).`;
+}
+
+function navigateToViewer(router, allowHardReload) {
+  router.push("/viewer");
+  if (!allowHardReload || typeof window === "undefined") return;
+  window.setTimeout(() => {
+    if (window.location.pathname !== "/viewer") {
+      window.location.assign("/viewer");
+    }
+  }, 200);
 }
 
 function formatProgress(loaded, total) {

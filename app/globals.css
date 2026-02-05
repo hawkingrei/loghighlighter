@@ -366,6 +366,10 @@ button.ghost {
   list-style: none;
 }
 
+.fold-block[open] > summary {
+  display: none;
+}
+
 .fold-block summary::-webkit-details-marker {
   display: none;
 }
