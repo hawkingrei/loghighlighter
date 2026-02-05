@@ -3,6 +3,62 @@ const MEMORY_LOG_KEY = "__loghighlighter_pendingLog";
 const DB_NAME = "loghighlighter";
 const STORE_NAME = "pendingLog";
 const DB_KEY = "log";
+const PENDING_LOG_VERSION = 1;
+
+function buildPayload(text, source) {
+  return {
+    v: PENDING_LOG_VERSION,
+    text,
+    storedAt: Date.now(),
+    source,
+  };
+}
+
+function isPayload(value) {
+  return (
+    value &&
+    typeof value === "object" &&
+    typeof value.text === "string" &&
+    typeof value.storedAt === "number"
+  );
+}
+
+function parseStoredValue(value) {
+  if (isPayload(value)) return value;
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (isPayload(parsed)) return parsed;
+  } catch (error) {
+    // Fall through to legacy format.
+  }
+  return { v: 0, text: value, storedAt: 0, source: "legacy" };
+}
+
+function pickBestPayload(candidates) {
+  let best = null;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (!best) {
+      best = candidate;
+      continue;
+    }
+    if (candidate.storedAt > best.storedAt) {
+      best = candidate;
+      continue;
+    }
+    if (candidate.storedAt === best.storedAt) {
+      const bestVersion = typeof best.v === "number" ? best.v : 0;
+      const candidateVersion = typeof candidate.v === "number" ? candidate.v : 0;
+      if (candidateVersion > bestVersion) {
+        best = candidate;
+      } else if (best.source === "legacy" && candidate.source !== "legacy") {
+        best = candidate;
+      }
+    }
+  }
+  return best;
+}
 
 function canUseIndexedDb() {
   return typeof indexedDB !== "undefined";
@@ -72,8 +128,14 @@ async function idbGet() {
       db.close();
     };
 
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
+
     tx.onerror = () => {
       db.close();
+      reject(tx.error);
     };
   });
 }
@@ -114,21 +176,47 @@ function setMemoryPendingLog(text) {
 function consumeMemoryPendingLog() {
   try {
     const value = window[MEMORY_LOG_KEY];
-    if (typeof value === "string") {
+    if (value) {
       delete window[MEMORY_LOG_KEY];
       return value;
     }
   } catch (error) {
-    return "";
+    return null;
   }
-  return "";
+  return null;
+}
+
+function clearSessionPendingLog() {
+  try {
+    sessionStorage.removeItem(PENDING_LOG_KEY);
+  } catch (error) {
+    // Best effort.
+  }
+}
+
+async function clearIndexedDbPendingLog() {
+  if (!canUseIndexedDb()) return;
+  try {
+    await idbDelete();
+  } catch (error) {
+    // Best effort.
+  }
+}
+
+function clearMemoryPendingLog() {
+  try {
+    delete window[MEMORY_LOG_KEY];
+  } catch (error) {
+    // Best effort.
+  }
 }
 
 export async function storePendingLog(text) {
   if (typeof window === "undefined") return { ok: false };
 
   try {
-    sessionStorage.setItem(PENDING_LOG_KEY, text);
+    const payload = buildPayload(text, "session");
+    sessionStorage.setItem(PENDING_LOG_KEY, JSON.stringify(payload));
     return { ok: true, via: "session" };
   } catch (error) {
     // Continue to indexedDB.
@@ -136,14 +224,16 @@ export async function storePendingLog(text) {
 
   if (canUseIndexedDb()) {
     try {
-      await idbSet(text);
+      const payload = buildPayload(text, "indexeddb");
+      await idbSet(payload);
       return { ok: true, via: "indexeddb" };
     } catch (error) {
       // Continue to memory.
     }
   }
 
-  if (setMemoryPendingLog(text)) {
+  const payload = buildPayload(text, "memory");
+  if (setMemoryPendingLog(payload)) {
     return { ok: true, via: "memory" };
   }
 
@@ -153,14 +243,14 @@ export async function storePendingLog(text) {
 export async function consumePendingLog() {
   if (typeof window === "undefined") return "";
 
-  const memoryValue = consumeMemoryPendingLog();
-  if (memoryValue) return memoryValue;
+  const memoryPayload = parseStoredValue(consumeMemoryPendingLog());
+  let sessionPayload = null;
+  let idbPayload = null;
 
   try {
     const pending = sessionStorage.getItem(PENDING_LOG_KEY);
     if (pending !== null) {
-      sessionStorage.removeItem(PENDING_LOG_KEY);
-      return pending;
+      sessionPayload = parseStoredValue(pending);
     }
   } catch (error) {
     // Continue to indexedDB.
@@ -169,12 +259,18 @@ export async function consumePendingLog() {
   if (canUseIndexedDb()) {
     try {
       const stored = await idbGet();
-      await idbDelete();
-      return typeof stored === "string" ? stored : "";
+      idbPayload = parseStoredValue(stored);
     } catch (error) {
-      return "";
+      // Ignore indexedDB errors.
     }
   }
 
-  return "";
+  const chosen = pickBestPayload([sessionPayload, idbPayload, memoryPayload]);
+
+  clearSessionPendingLog();
+  clearMemoryPendingLog();
+  await clearIndexedDbPendingLog();
+
+  if (!chosen) return "";
+  return chosen.text;
 }
